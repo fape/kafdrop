@@ -4,6 +4,7 @@ import jakarta.annotation.PostConstruct;
 import kafdrop.config.KafkaConfiguration;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.Config;
+import org.apache.kafka.clients.admin.ConsumerGroupDescription;
 import org.apache.kafka.clients.admin.ConsumerGroupListing;
 import org.apache.kafka.clients.admin.DeleteTopicsOptions;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -100,6 +101,20 @@ public final class KafkaHighLevelAdminClient {
     } catch (InterruptedException | ExecutionException e) {
       if (e.getCause() instanceof GroupAuthorizationException) {
         LOG.info("Not authorized to view consumer group {}; skipping", groupId);
+        return Collections.emptyMap();
+      } else {
+        throw new KafkaAdminClientException(e);
+      }
+    }
+  }
+
+  Map<String, ConsumerGroupDescription> describeConsumerGroups(Set<String> groupIds) {
+    final var customerGroups = adminClient.describeConsumerGroups(groupIds);
+    try {
+      return customerGroups.all().get();
+    } catch (InterruptedException | ExecutionException e) {
+      if (e.getCause() instanceof GroupAuthorizationException) {
+        LOG.info("Not authorized to describe consumer groups {}; skipping", groupIds);
         return Collections.emptyMap();
       } else {
         throw new KafkaAdminClientException(e);
