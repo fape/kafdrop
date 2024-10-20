@@ -93,6 +93,20 @@ public final class KafkaHighLevelAdminClient {
     }
   }
 
+  Map<String, ConsumerGroupDescription> describeConsumerGroups(Set<String> groupIds){
+    final var customerGroups = adminClient.describeConsumerGroups(groupIds);
+    try {
+      return customerGroups.all().get();
+    } catch (InterruptedException | ExecutionException e) {
+      if (e.getCause() instanceof GroupAuthorizationException) {
+        LOG.info("Not authorized to describe consumer groups {}; skipping", groupIds);
+        return Collections.emptyMap();
+      } else {
+        throw new KafkaAdminClientException(e);
+      }
+    }
+  }
+
   Map<String, Config> describeTopicConfigs(Set<String> topicNames) {
     final var resources = topicNames.stream()
         .map(topic -> new ConfigResource(Type.TOPIC, topic))

@@ -30,6 +30,14 @@
                 <td>Topics</td>
                 <td>${consumer.topics?size}</td>
             </tr>
+            <tr>
+                <td>Members</td>
+                <td>
+                    <ul>
+                        <#list consumer.members as member>
+                            <li>${member}</li>
+                        </#list>
+                    </ul>
             </tbody>
         </table>
     </div>

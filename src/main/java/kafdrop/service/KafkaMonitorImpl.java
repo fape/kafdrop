@@ -203,6 +203,7 @@ public final class KafkaMonitorImpl implements KafkaMonitor {
   @Override
   public List<ConsumerVO> getConsumersByGroup(String groupId) {
     List<ConsumerGroupOffsets> consumerGroupOffsets = getConsumerOffsets(groupId);
+    var consumerGroupDescriptions = highLevelAdminClient.describeConsumerGroups(Set.of(groupId));
 
     String[] uniqueTopicNames = consumerGroupOffsets.stream()
       .flatMap(consumerGroupOffset -> consumerGroupOffset.offsets.keySet()
@@ -212,9 +213,11 @@ public final class KafkaMonitorImpl implements KafkaMonitor {
 
     List<TopicVO> topicVOs = getTopics(uniqueTopicNames);
 
+
     LOG.debug("consumerGroupOffsets: {}", consumerGroupOffsets);
+    LOG.debug("consumerGroupDescriptions: {}", consumerGroupDescriptions);
     LOG.debug("topicVos: {}", topicVOs);
-    return convert(consumerGroupOffsets, topicVOs);
+    return convert(consumerGroupOffsets, topicVOs, consumerGroupDescriptions);
   }
 
   @Override
@@ -223,7 +226,7 @@ public final class KafkaMonitorImpl implements KafkaMonitor {
     final var consumerGroupOffsets = getConsumerOffsets(topics);
     LOG.debug("consumerGroupOffsets: {}", consumerGroupOffsets);
     LOG.debug("topicVos: {}", topicVos);
-    return convert(consumerGroupOffsets, topicVos);
+    return convert(consumerGroupOffsets, topicVos, Collections.emptyMap());
   }
 
   @Override
@@ -253,7 +256,8 @@ public final class KafkaMonitorImpl implements KafkaMonitor {
     return aclVos;
   }
 
-  private static List<ConsumerVO> convert(List<ConsumerGroupOffsets> consumerGroupOffsets, Collection<TopicVO> topicVos) {
+  private static List<ConsumerVO> convert(List<ConsumerGroupOffsets> consumerGroupOffsets, Collection<TopicVO> topicVos,
+                                          Map<String, ConsumerGroupDescription> consumerGroupDescriptions) {
     final var topicVoMap = topicVos.stream().collect(Collectors.toMap(TopicVO::getName, Function.identity()));
     final var groupTopicPartitionOffsetMap = new TreeMap<String, Map<String, Map<Integer, Long>>>();
 
@@ -276,6 +280,13 @@ public final class KafkaMonitorImpl implements KafkaMonitor {
       final var groupId = groupTopicPartitionOffset.getKey();
       final var consumerVo = new ConsumerVO(groupId);
       consumerVos.add(consumerVo);
+
+      ConsumerGroupDescription description = consumerGroupDescriptions.get(groupId);
+      if (description != null) {
+        for (MemberDescription member : description.members()) {
+          consumerVo.addMember(member.host());
+        }
+      }
 
       for (var topicPartitionOffset : groupTopicPartitionOffset.getValue().entrySet()) {
         final var topic = topicPartitionOffset.getKey();

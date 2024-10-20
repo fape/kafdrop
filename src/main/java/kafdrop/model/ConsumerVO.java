@@ -25,6 +25,7 @@ import java.util.*;
 public final class ConsumerVO implements Comparable<ConsumerVO> {
   private final String groupId;
   private final Map<String, ConsumerTopicVO> topics = new TreeMap<>();
+  private final Set<String> members = new LinkedHashSet<>();
 
   public ConsumerVO(String groupId) {
     Validate.notEmpty("groupId is required");
@@ -45,6 +46,14 @@ public final class ConsumerVO implements Comparable<ConsumerVO> {
 
   public Collection<ConsumerTopicVO> getTopics() {
     return topics.values();
+  }
+
+  public void addMember(String member) {
+    members.add(member);
+  }
+
+  public Collection<String> getMembers() {
+    return members;
   }
 
   @Override
